@@ -50,13 +50,15 @@ function setup() {
         created_at timestamptz NOT NULL DEFAULT now())`;
       await q`CREATE UNIQUE INDEX IF NOT EXISTS vessels_uniq ON vessels (lower(name))`;
       await q`CREATE TABLE IF NOT EXISTS app_flags (key text PRIMARY KEY)`;
-      const first = await q`INSERT INTO app_flags (key) VALUES ('vessels_seeded')
-        ON CONFLICT DO NOTHING RETURNING key`;
-      if (first.length) {
+      // Seed once. The flag is written only after the vessels, so a failed
+      // cold start retries next time (ON CONFLICT skips any already added).
+      const seeded = await q`SELECT 1 FROM app_flags WHERE key = 'vessels_seeded'`;
+      if (!seeded.length) {
         for (const [i, [name, w]] of STARTING_VESSELS.entries()) {
           await q`INSERT INTO vessels (name, weight_g, sort) VALUES (${name}, ${w}, ${i + 1})
             ON CONFLICT DO NOTHING`;
         }
+        await q`INSERT INTO app_flags (key) VALUES ('vessels_seeded') ON CONFLICT DO NOTHING`;
       }
     })().catch((e) => { ready = null; throw e; });
   }

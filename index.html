@@ -366,7 +366,7 @@ function updateLive() {
   $('cookedLbl').textContent = withVessel ? 'Weighed with vessel (g)' : 'Cooked total (g)';
   const gross = +$('cooked').value || 0, ck = foodWeight();
   $('foodOnly').hidden = !withVessel || !gross;
-  $('foodOnly').textContent = ck > 0 ? `Food only: ${fmtG(ck)} g` : 'Less than the empty vessel';
+  $('foodOnly').textContent = ck > 0 ? `Food only: ${fmtG(ck)} g` : 'Not more than the empty vessel';
   const p = +$('plate').value || 0;
   const f = ck > 0 ? Math.min(p / ck, 1) : 0;
   $('ring').setAttribute('stroke-dasharray', `${(f * 251.3).toFixed(1)} 252`);
@@ -397,7 +397,7 @@ function quantify() {
   if (!rows.length) { err.textContent = 'Add at least one ingredient with grams, bro.'; return; }
   if (vw === null) { if (vs) { vs.classList.add('bad'); vs.focus(); } err.textContent = 'Pick the vessel you cooked in.'; return; }
   if (!(gross > 0)) { ce.classList.add('bad'); err.textContent = 'Weigh the cooked dish and enter the total.'; ce.focus(); return; }
-  if (!(ck > 0)) { ce.classList.add('bad'); err.textContent = "That's less than the empty vessel — check the weight."; ce.focus(); return; }
+  if (!(ck > 0)) { ce.classList.add('bad'); err.textContent = "That's not more than the empty vessel — check the weight."; ce.focus(); return; }
   if (!(p > 0)) { pe.classList.add('bad'); err.textContent = 'Enter how much is on your plate.'; pe.focus(); return; }
   if (p > ck) { pe.classList.add('bad'); err.textContent = "Your plate can't weigh more than the whole dish."; pe.focus(); return; }
   if (gross > MAX_G || rows.some((r) => r.raw_g > MAX_G)) { err.textContent = 'That weight is too big — check the grams.'; return; }
@@ -410,7 +410,7 @@ function quantify() {
   const vessel = vesselSel === NO_VESSEL ? null : findVessel(vesselSel).name;
   const key = JSON.stringify([title, rows]);
   const prev = lastId && key === lastKey && data.dishes.find((d) => d.id === lastId);
-  if (prev && prev.cooked_g === ck && prev.plate_g === p) { $('out').scrollIntoView({behavior:'smooth', block:'start'}); return; }
+  if (prev && prev.cooked_g === ck && prev.plate_g === p && prev.vessel === vessel) { $('out').scrollIntoView({behavior:'smooth', block:'start'}); return; }
   if (prev) removeDish(prev.id);
   const created = new Date().toISOString();
   let text = `🍽 *${title}* — ${fmtWhen(created)}\nMy plate: ${r0(p)} g (${r0(f * 100)}% of the dish)\n`;
@@ -420,7 +420,8 @@ function quantify() {
   });
   text = text.trimEnd();
 
-  const dish = {id: uuid(), title, created_at: created, cooked_g: ck, plate_g: p, rows, text, vessel, vessel_g: vessel ? vw : null};
+  // vessel_g 0 with no vessel name = "No vessel" (old dishes have neither).
+  const dish = {id: uuid(), title, created_at: created, cooked_g: ck, plate_g: p, rows, text, vessel, vessel_g: vw};
   data.dishes.unshift(dish);
   rows.forEach((r) => { const u = data.usual[r.section]; u[r.name] = (u[r.name] || 0) + 1; });
   enqueue({t:'addDish', dish});
@@ -479,6 +480,8 @@ function loadDish(d) {
   $('cooked').value = ''; $('plate').value = '';
   $('out').hidden = true; $('err').textContent = '';
   if (d.vessel && findVessel(d.vessel)) setVessel(findVessel(d.vessel).name);
+  else if (!d.vessel && d.vessel_g === 0) setVessel(NO_VESSEL);
+  // vessel_g null = a dish from before vessels existed: keep the current choice.
   renderSections(); renderVessel();
   window.scrollTo({top: 0, behavior: 'smooth'});
   $('cooked').placeholder = 'weigh it again';
@@ -539,7 +542,14 @@ document.addEventListener('change', (e) => {
     const v = findVessel(t.dataset.vw), w = +t.value;
     if (!v) return;
     if (!(w > 0) || w > 20000) { t.value = r0(v.weight_g); return; }
-    if (w !== v.weight_g) { v.weight_g = w; enqueue({t:'saveVessel', name: v.name, w}); renderVessel(); }
+    if (w !== v.weight_g) {
+      // Don't redraw the list here: the tap that caused this blur (done / ✕) must still land.
+      v.weight_g = w; enqueue({t:'saveVessel', name: v.name, w});
+      t.value = r0(w);
+      const opt = [...$('vessel').options].find((o) => same(o.value, v.name));
+      if (opt) opt.textContent = `${v.name} · ${fmtG(w)} g`;
+      updateLive();
+    }
     return;
   }
   if (t.dataset.s === undefined) return;

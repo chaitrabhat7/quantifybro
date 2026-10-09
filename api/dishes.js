@@ -31,7 +31,8 @@ module.exports = guarded(async (req, res) => {
   }
   // Optional: the vessel it was weighed in (cooked_g is always food only).
   const vessel = cleanName(b.vessel) || null;
-  const vesselG = vessel ? Number(b.vessel_g) : null;
+  // No name + weight 0 = "No vessel" (food weighed alone); neither = an old dish.
+  const vesselG = vessel ? Number(b.vessel_g) : (b.vessel_g === 0 ? 0 : null);
   if (vessel && !(Number.isFinite(vesselG) && vesselG >= 0 && vesselG < 1e6)) return res.status(400).json({ error: 'Bad vessel weight.' });
 
   const created = new Date(b.created_at);
