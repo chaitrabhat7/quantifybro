@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>QuantifyBro</title>
+<meta name="theme-color" content="#FFF6E5">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#161616;--cream:#FFF6E5;--lime:#C6F432;--muted:#5F5E5A;--red:#A32D2D;--mono:'Space Mono',ui-monospace,monospace}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--cream);color:var(--ink)}
+body{font-family:'Bricolage Grotesque',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+.app{max-width:440px;margin:0 auto;padding:16px 16px calc(32px + env(safe-area-inset-bottom))}
+button{font-family:inherit;color:var(--ink);cursor:pointer}
+select,input{background:#fff;color:var(--ink);border:2px solid var(--ink);border-radius:12px;height:44px;font-family:inherit;font-size:16px;padding:0 10px;width:100%;outline:none}
+select:focus,input:focus{border-color:#185FA5}
+.num{font-family:var(--mono);text-align:right}
+.top{display:flex;align-items:center;justify-content:space-between;margin:4px 2px 14px}
+.logo{font-size:32px;font-weight:800;letter-spacing:-1.5px;line-height:1}
+.logo b{background:var(--lime);padding:0 6px;border-radius:10px;border:2px solid var(--ink);margin-left:2px;font-weight:800}
+.pill{font-family:var(--mono);font-size:12px;border:2px solid var(--ink);border-radius:99px;padding:4px 10px;background:#fff}
+.card{border:2px solid var(--ink);border-radius:18px;padding:10px 12px 12px;margin-bottom:14px;box-shadow:3px 3px 0 var(--ink)}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:6px}
+.ct{font-size:19px;font-weight:800;letter-spacing:-.3px;display:flex;align-items:center;gap:6px}
+.cg{font-family:var(--mono);font-size:12px;background:var(--ink);color:var(--cream);padding:2px 8px;border-radius:99px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) 82px 32px;gap:6px;margin-bottom:6px}
+.x{border:none;background:none;font-size:18px;padding:0}
+.add{border:2px dashed var(--ink);background:transparent;border-radius:99px;height:34px;padding:0 14px;font-weight:500;font-size:14px}
+.link{border:none;background:none;font-size:13px;text-decoration:underline;padding:0}
+.chip{display:inline-flex;align-items:center;gap:4px;background:#fff;border:2px solid var(--ink);border-radius:99px;padding:2px 4px 2px 10px;font-size:14px;margin:0 4px 6px 0}
+.chip button{border:none;background:var(--ink);color:var(--cream);border-radius:99px;width:22px;height:22px;font-size:11px;padding:0}
+.mini{border:2px solid var(--ink);background:var(--ink);color:var(--lime);border-radius:12px;height:44px;font-weight:800;padding:0}
+.dark{background:var(--ink);color:var(--cream);box-shadow:3px 3px 0 var(--lime)}
+.dark .lbl{font-size:13px;color:#B4B2A9;margin-bottom:3px}
+.go{width:100%;height:58px;border:2.5px solid var(--ink);border-radius:18px;background:var(--lime);font-weight:800;font-size:20px;box-shadow:4px 4px 0 var(--ink);transition:transform .08s,box-shadow .08s}
+.go:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink)}
+.err{font-size:14px;color:var(--red);margin-top:8px;font-weight:500;min-height:1em}
+.bad{border-color:#E24B4A!important}
+.tk{background:#fff;border:2px solid var(--ink);border-radius:6px 6px 0 0;padding:14px;font-family:var(--mono);font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.zz{display:block;margin-top:-2px;width:100%;height:10px}
+.btns{display:flex;gap:8px;margin-top:12px}
+.sb{flex:1;height:46px;border:2px solid var(--ink);border-radius:14px;font-weight:800;font-size:15px;background:#fff}
+.wa{background:#5DCAA5}
+.stash-h{display:flex;align-items:center;gap:8px;margin:26px 2px 10px}
+.stash-h span:first-child{font-size:21px;font-weight:800;letter-spacing:-.5px}
+.item{background:#fff;border:2px solid var(--ink);border-radius:14px;margin-bottom:8px;overflow:hidden}
+.item>button{width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;background:none;border:none;padding:12px;text-align:left;font-size:16px}
+.item .t{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .m{font-family:var(--mono);font-size:12px;white-space:nowrap}
+.item .body{padding:0 12px 12px}
+.item .tk{border-radius:10px;border-width:1.5px}
+.sync{font-size:11px;background:#FAC775;border:1.5px solid var(--ink);border-radius:99px;padding:1px 6px;margin-left:6px;font-family:var(--mono)}
+.hint{font-size:14px;color:var(--muted);padding:0 2px}
+.status{font-size:12px;color:var(--muted);text-align:center;margin-top:18px;font-family:var(--mono)}
+.gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.gate .card{width:100%;max-width:360px;background:#fff;padding:20px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate" hidden>
+  <div class="card">
+    <div class="logo" style="margin-bottom:12px">quantify<b>bro</b></div>
+    <p style="margin:0 0 12px">Enter your PIN to open your stash.</p>
+    <input id="pin" type="password" autocomplete="current-password" placeholder="PIN" style="margin-bottom:10px">
+    <button class="go" id="pinGo" style="height:50px;font-size:18px">Let me in</button>
+    <div class="err" id="pinErr"></div>
+  </div>
+</div>
+
+<div class="app" id="app" hidden>
+  <div class="top">
+    <div class="logo">quantify<b>bro</b></div>
+    <div class="pill" id="today"></div>
+  </div>
+
+  <input id="title" placeholder="What's cooking? (dish name)" maxlength="60" style="margin-bottom:14px;height:48px;font-weight:500">
+
+  <div id="secs"></div>
+
+  <div class="card dark">
+    <div style="display:grid;grid-template-columns:100px minmax(0,1fr);gap:14px;align-items:center">
+      <svg viewBox="0 0 100 100" width="100" height="100" aria-hidden="true">
+        <circle cx="50" cy="50" r="40" fill="none" stroke="#444441" stroke-width="14"/>
+        <circle id="ring" cx="50" cy="50" r="40" fill="none" stroke="#C6F432" stroke-width="14" stroke-linecap="round" stroke-dasharray="0 252" transform="rotate(-90 50 50)"/>
+        <text id="pct" x="50" y="56" text-anchor="middle" font-family="Space Mono, monospace" font-size="18" fill="#FFF6E5">0%</text>
+      </svg>
+      <div style="display:grid;gap:8px">
+        <div><div class="lbl">Cooked total (g)</div><input id="cooked" class="num" inputmode="decimal" placeholder="1100" autocomplete="off"></div>
+        <div><div class="lbl" style="color:var(--lime)">My plate (g)</div><input id="plate" class="num" inputmode="decimal" placeholder="250" autocomplete="off" enterkeyhint="go" style="border-color:var(--lime)"></div>
+      </div>
+    </div>
+  </div>
+
+  <button class="go" id="go">Quantify it, bro 💪</button>
+  <div class="err" id="err" role="alert"></div>
+
+  <div id="out" hidden>
+    <div class="tk" id="txt"></div>
+    <svg class="zz" viewBox="0 0 300 10" preserveAspectRatio="none" aria-hidden="true"><path id="zz" fill="#fff" stroke="#161616" stroke-width="2"/></svg>
+    <div class="btns">
+      <button class="sb" id="copy">Copy</button>
+      <button class="sb wa" id="wa">WhatsApp ↗</button>
+    </div>
+    <div style="text-align:center;font-size:14px;margin-top:10px;font-weight:500" id="savedMsg"></div>
+  </div>
+
+  <div class="stash-h"><span>The stash</span><span class="cg" id="count">0</span></div>
+  <input id="search" placeholder="Search your dishes" style="margin-bottom:10px;height:40px;font-size:15px" hidden>
+  <div id="stash"></div>
+  <div class="status" id="status"></div>
+</div>
+
+<script>
+// ---------- Built-in ingredient lists (edit freely) ----------
+const SECTIONS = [
+  {k:'veg', n:'Veggies', e:'🥕', bg:'#C0DD97', o:['Onion','Tomato','Potato','Sweet potato','Carrot','Beetroot','Radish','Beans','Cluster beans','Broad beans','Peas','Capsicum','Cabbage','Cauliflower','Broccoli','Spinach','Methi leaves','Amaranth','Coriander leaves','Mint','Curry leaves','Brinjal','Ladies finger','Bottle gourd','Ridge gourd','Snake gourd','Bitter gourd','Ash gourd','Pumpkin','Chayote','Drumstick','Raw banana','Cucumber','Mushroom','Corn','Spring onion','Garlic','Ginger','Green chilli','Lemon']},
+  {k:'starch', n:'Starch', e:'🌾', bg:'#FAC775', o:['Rice','Brown rice','Red rice','Wheat flour','Maida','Rava','Broken wheat','Poha','Murmura','Vermicelli','Ragi flour','Jowar flour','Bajra flour','Rice flour','Besan','Oats','Quinoa','Millet','Sabudana','Whole wheat bread','White bread','Pasta','Toor dal','Moong dal','Masoor dal','Urad dal','Chana dal','Whole moong','Kabuli chana','Kala chana','Rajma','Horse gram','Soya chunks']},
+  {k:'fat', n:'Fat', e:'🧈', bg:'#F0997B', o:['Oil','Sunflower oil','Groundnut oil','Coconut oil','Mustard oil','Sesame oil','Olive oil','Ghee','Butter','Grated coconut','Dry coconut','Peanuts','Sesame seeds','Flax seeds','Chia seeds']},
+  {k:'extra', n:'Extras', e:'🧀', bg:'#AFA9EC', o:['Milk','Curd','Buttermilk','Paneer','Cheese','Cream','Khoa','Milk powder','Almonds','Cashew','Walnuts','Pistachios','Raisins','Dates','Anjeer','Dried apricot']},
+];
+const USUAL_MAX = 6;
+
+// ---------- Small helpers ----------
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const same = (a, b) => a.toLowerCase() === b.toLowerCase();
+const r0 = (n) => Math.round(n);
+function ls(key, fallback) { try { const v = JSON.parse(localStorage.getItem(key)); return v ?? fallback; } catch { return fallback; } }
+function lsSet(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch {} }
+function lsDel(key) { try { localStorage.removeItem(key); } catch {} }
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() :
+  'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => { const r = Math.random()*16|0; return (c === 'x' ? r : (r&3|8)).toString(16); }));
+// Digits and one dot only — no minus, no "e".
+const cleanNum = (v) => { v = String(v).replace(/[^0-9.]/g, ''); const i = v.indexOf('.'); return i < 0 ? v : v.slice(0, i+1) + v.slice(i+1).replace(/\./g, ''); };
+const fmtWhen = (iso) => new Date(iso).toLocaleString('en-IN', {day:'numeric', month:'short', hour:'numeric', minute:'2-digit'});
+
+// ---------- State ----------
+// data mirrors the server: {dishes, custom:{sec:[names]}, usual:{sec:{name:n}}}
+const EMPTY = () => ({dishes:[], custom:{veg:[],starch:[],fat:[],extra:[]}, usual:{veg:{},starch:{},fat:{},extra:{}}});
+let data = Object.assign(EMPTY(), ls('qb.cache', {}));
+let queue = ls('qb.queue', []);          // writes waiting to reach the server
+let pin = ls('qb.pin', '');
+let form = {veg:[{}], starch:[{}], fat:[{}], extra:[]};
+const editing = {};
+let openId = null;
+let lastId = null, lastKey = '';   // the dish just quantified (re-tapping updates it instead of saving twice)
+const MAX_G = 999999;
+
+const persist = () => { lsSet('qb.cache', data); lsSet('qb.queue', queue); };
+
+// ---------- Server ----------
+async function api(method, path, body) {
+  const res = await fetch(path, {method, headers: {'content-type':'application/json', 'x-pin': pin}, body: body ? JSON.stringify(body) : undefined});
+  if (res.status === 401) { const e = new Error('pin'); e.pin = true; throw e; }
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) { const e = new Error(j.error || 'Server error'); e.status = res.status; throw e; }
+  return j;
+}
+
+function askPin(msg) {
+  pin = ''; lsDel('qb.pin');
+  $('app').hidden = true; $('gate').hidden = false;
+  $('pinErr').textContent = msg || '';
+  $('pin').value = ''; $('pin').focus();
+}
+
+let flushing = false, sending = null;
+async function flush() {
+  if (flushing || !pin) return;
+  flushing = true;
+  let refused = '';
+  try {
+    while (queue.length) {
+      const op = queue[0];
+      sending = op;
+      try {
+        if (op.t === 'addDish') await api('POST', '/api/dishes', op.dish);
+        if (op.t === 'delDish') await api('DELETE', '/api/dishes?id=' + encodeURIComponent(op.id));
+        if (op.t === 'addCustom') await api('POST', '/api/custom', {section: op.s, name: op.name});
+        if (op.t === 'delCustom') await api('DELETE', `/api/custom?section=${encodeURIComponent(op.s)}&name=${encodeURIComponent(op.name)}`);
+      } catch (e) {
+        if (e.pin) return askPin('Your PIN changed. Enter it again.');
+        if (e.status && e.status >= 400 && e.status < 500) {
+          refused = `Not saved: ${op.dish ? '“' + op.dish.title + '” — ' : ''}${e.message}`;
+          if (op.t === 'addDish') data.dishes = data.dishes.filter((d) => d.id !== op.dish.id);
+        } else {
+          setStatus(e.status ? `Server problem (${e.message}) — changes will sync later` : 'Offline — changes will sync later');
+          return;
+        }
+      }
+      // Remove by reference: the queue may have changed while this was sending.
+      const i = queue.indexOf(op); if (i >= 0) queue.splice(i, 1);
+      persist();
+    }
+    setStatus(refused);
+  } finally { flushing = false; sending = null; renderStash(); }
+}
+
+async function refresh() {
+  if (!pin) return;
+  await flush();
+  if (queue.length) return;            // still offline; keep local copy
+  try {
+    const fresh = await api('GET', '/api/data');
+    data = Object.assign(EMPTY(), fresh);
+    persist(); renderSections(); renderStash(); setStatus('');
+  } catch (e) {
+    if (e.pin) return askPin(pin ? 'Wrong PIN.' : '');
+    setStatus('Offline — showing your last saved stash');
+  }
+}
+
+function setStatus(t) { $('status').textContent = t; }
+function enqueue(op) { queue.push(op); persist(); flush(); }
+
+// ---------- Dropdowns ----------
+function optionsFor(s, chosen) {
+  const used = data.usual[s.k] || {}, mine = data.custom[s.k] || [];
+  const mineSet = new Set(mine);
+  const all = [...s.o, ...mine.filter((m) => !s.o.some((o) => same(o, m)))];
+  const top = all.filter((o) => used[o] > 0).sort((a, b) => used[b] - used[a] || a.localeCompare(b)).slice(0, USUAL_MAX);
+  const topSet = new Set(top);
+  const rest = all.filter((o) => !topSet.has(o)).sort((a, b) => a.localeCompare(b));
+  if (chosen && !all.includes(chosen)) rest.unshift(chosen);   // e.g. a deleted custom still in a loaded dish
+  const op = (o) => `<option value="${esc(o)}"${o === chosen ? ' selected' : ''}>${mineSet.has(o) ? '★ ' : ''}${esc(o)}</option>`;
+  return `<option value="">Pick one…</option>` +
+    (top.length ? `<optgroup label="Your usual">${top.map(op).join('')}</optgroup>` : '') +
+    `<optgroup label="All ${s.n.toLowerCase()}">${rest.map(op).join('')}</optgroup>` +
+    `<option value="__new">＋ Add new ingredient…</option>`;
+}
+
+const sectionSum = (k) => form[k].reduce((a, r) => a + (r.name && +r.g > 0 ? +r.g : 0), 0);
+
+function rowHtml(s, r, j) {
+  if (r.adding) return `
+    <div class="row" style="grid-template-columns:minmax(0,1fr) 62px 32px">
+      <input placeholder="New ingredient name" maxlength="60" data-new="${s.k}" data-j="${j}" value="${esc(r.draft || '')}" style="border-style:dashed" enterkeyhint="done">
+      <button class="mini" data-ok="${s.k}" data-j="${j}">Add</button>
+      <button class="x" data-cancel="${s.k}" data-j="${j}" aria-label="Cancel">✕</button>
+    </div>
+    <div class="err" data-nerr="${s.k}-${j}" style="margin:-2px 0 6px;font-size:13px;min-height:0"></div>`;
+  return `
+    <div class="row">
+      <select data-s="${s.k}" data-j="${j}" aria-label="${s.n} ingredient">${optionsFor(s, r.name)}</select>
+      <input class="num" inputmode="decimal" placeholder="g" value="${esc(r.g || '')}" data-g="${s.k}" data-j="${j}" aria-label="grams" autocomplete="off">
+      <button class="x" data-del="${s.k}" data-j="${j}" aria-label="Remove row">✕</button>
+    </div>`;
+}
+
+function renderSections() {
+  $('secs').innerHTML = SECTIONS.map((s) => {
+    const mine = data.custom[s.k] || [];
+    const ed = editing[s.k] && mine.length;
+    return `<div class="card" style="background:${s.bg}">
+      <div class="ch">
+        <span class="ct"><span aria-hidden="true">${s.e}</span>${s.n}</span>
+        <span style="display:flex;align-items:center;gap:10px">
+          ${mine.length ? `<button class="link" data-edit="${s.k}">${ed ? 'done' : 'edit list'}</button>` : ''}
+          <span class="cg" id="sum-${s.k}">${r0(sectionSum(s.k))} g</span>
+        </span>
+      </div>
+      ${ed ? `<div style="margin-bottom:6px"><div style="font-size:13px;margin-bottom:6px">Your added ${s.n.toLowerCase()} — tap ✕ to remove</div>${mine.map((m) => `<span class="chip">${esc(m)}<button data-rm="${s.k}" data-name="${esc(m)}" aria-label="Remove ${esc(m)}">✕</button></span>`).join('')}</div>` : ''}
+      ${form[s.k].map((r, j) => rowHtml(s, r, j)).join('')}
+      <button class="add" data-add="${s.k}">+ add ${s.n.toLowerCase()}</button>
+    </div>`;
+  }).join('');
+  updateLive();
+}
+
+function updateLive() {
+  SECTIONS.forEach((s) => { const el = $('sum-' + s.k); if (el) el.textContent = r0(sectionSum(s.k)) + ' g'; });
+  const ck = +$('cooked').value || 0, p = +$('plate').value || 0;
+  const f = ck ? Math.min(p / ck, 1) : 0;
+  $('ring').setAttribute('stroke-dasharray', `${(f * 251.3).toFixed(1)} 252`);
+  $('pct').textContent = r0(f * 100) + '%';
+}
+
+function addCustom(k, j) {
+  const r = form[k][j];
+  const v = (r.draft || '').trim().replace(/\s+/g, ' ');
+  const errEl = document.querySelector(`[data-nerr="${k}-${j}"]`);
+  if (!v) { errEl.textContent = 'Type a name first.'; return; }
+  const s = SECTIONS.find((x) => x.k === k);
+  const existing = [...s.o, ...data.custom[k]].find((o) => same(o, v));
+  const name = existing || v.charAt(0).toUpperCase() + v.slice(1);
+  if (!existing) { data.custom[k] = [...data.custom[k], name].sort((a, b) => a.localeCompare(b)); enqueue({t:'addCustom', s:k, name}); }
+  form[k][j] = {name, g: r.g};
+  renderSections();
+  const g = document.querySelector(`[data-g="${k}"][data-j="${j}"]`); g && g.focus();
+}
+
+// ---------- Quantify ----------
+function quantify() {
+  const err = $('err'), ce = $('cooked'), pe = $('plate');
+  [ce, pe].forEach((e) => e.classList.remove('bad'));
+  const rows = SECTIONS.flatMap((s) => form[s.k].filter((r) => r.name && +r.g > 0).map((r) => ({section: s.k, name: r.name, raw_g: +r.g})));
+  const ck = +ce.value, p = +pe.value;
+  if (!rows.length) { err.textContent = 'Add at least one ingredient with grams, bro.'; return; }
+  if (!(ck > 0)) { ce.classList.add('bad'); err.textContent = 'Weigh the cooked dish and enter the total.'; ce.focus(); return; }
+  if (!(p > 0)) { pe.classList.add('bad'); err.textContent = 'Enter how much is on your plate.'; pe.focus(); return; }
+  if (p > ck) { pe.classList.add('bad'); err.textContent = "Your plate can't weigh more than the whole dish."; pe.focus(); return; }
+  if (ck > MAX_G || rows.some((r) => r.raw_g > MAX_G)) { err.textContent = 'That weight is too big — check the grams.'; return; }
+  err.textContent = '';
+
+  const f = p / ck;
+  const title = $('title').value.trim().replace(/\s+/g, ' ') || 'Dish';
+
+  // Tapping again: nothing changed → don't save twice; only the weights changed → replace that save.
+  const key = JSON.stringify([title, rows]);
+  const prev = lastId && key === lastKey && data.dishes.find((d) => d.id === lastId);
+  if (prev && prev.cooked_g === ck && prev.plate_g === p) { $('out').scrollIntoView({behavior:'smooth', block:'start'}); return; }
+  if (prev) removeDish(prev.id);
+  const created = new Date().toISOString();
+  let text = `🍽 *${title}* — ${fmtWhen(created)}\nMy plate: ${r0(p)} g (${r0(f * 100)}% of the dish)\n`;
+  SECTIONS.forEach((s) => {
+    const g = rows.filter((r) => r.section === s.k);
+    if (g.length) text += `\n${s.e} *${s.n}*\n` + g.map((r) => `• ${r.name}: ${r0(r.raw_g * f)} g`).join('\n') + '\n';
+  });
+  text = text.trimEnd();
+
+  const dish = {id: uuid(), title, created_at: created, cooked_g: ck, plate_g: p, rows, text};
+  data.dishes.unshift(dish);
+  rows.forEach((r) => { const u = data.usual[r.section]; u[r.name] = (u[r.name] || 0) + 1; });
+  enqueue({t:'addDish', dish});
+  lastId = dish.id; lastKey = key;
+
+  $('txt').textContent = text;
+  $('out').hidden = false;
+  $('copy').textContent = 'Copy';
+  $('savedMsg').textContent = prev ? '✓ Updated in your stash' : '✓ Saved to your stash';
+  renderSections(); renderStash();
+  $('out').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+async function copyText(t, btn) {
+  try { await navigator.clipboard.writeText(t); }
+  catch { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+  btn.textContent = 'Copied ✓';
+}
+// New tab, so the result stays on screen if WhatsApp doesn't open.
+const openWhatsApp = (t) => { window.open('https://wa.me/?text=' + encodeURIComponent(t), '_blank', 'noopener'); };
+
+// ---------- Stash ----------
+function renderStash() {
+  const q = $('search').value.trim().toLowerCase();
+  const pending = new Set(queue.filter((o) => o.t === 'addDish').map((o) => o.dish.id));
+  const list = data.dishes.filter((d) => !q || d.title.toLowerCase().includes(q));
+  $('count').textContent = data.dishes.length;
+  $('search').hidden = data.dishes.length < 5;
+  if (!data.dishes.length) { $('stash').innerHTML = `<div class="hint">Every dish you quantify lands here — no save button needed.</div>`; return; }
+  if (!list.length) { $('stash').innerHTML = `<div class="hint">No dish called “${esc(q)}”.</div>`; return; }
+  $('stash').innerHTML = list.map((d) => `
+    <div class="item">
+      <button data-open="${d.id}" aria-expanded="${openId === d.id}">
+        <span class="t">${esc(d.title)}${pending.has(d.id) ? '<span class="sync">waiting to sync</span>' : ''}</span>
+        <span class="m">${fmtWhen(d.created_at)} · ${r0(d.plate_g)}g</span>
+      </button>
+      ${openId === d.id ? `<div class="body">
+        <div class="tk">${esc(d.text)}</div>
+        <div class="btns">
+          <button class="sb" data-copy="${d.id}">Copy</button>
+          <button class="sb wa" data-wa="${d.id}">WhatsApp ↗</button>
+        </div>
+        <div class="btns">
+          <button class="sb" data-load="${d.id}">Load into form</button>
+          <button class="sb" data-rmdish="${d.id}" style="flex:0 0 auto;padding:0 16px">Delete</button>
+        </div>
+      </div>` : ''}
+    </div>`).join('');
+}
+
+function loadDish(d) {
+  form = {veg:[], starch:[], fat:[], extra:[]};
+  d.rows.forEach((r) => form[r.section] && form[r.section].push({name: r.name, g: String(r.raw_g)}));
+  SECTIONS.forEach((s) => { if (!form[s.k].length && s.k !== 'extra') form[s.k].push({}); });
+  $('title').value = d.title === 'Dish' ? '' : d.title;
+  $('cooked').value = ''; $('plate').value = '';
+  $('out').hidden = true; $('err').textContent = '';
+  renderSections();
+  window.scrollTo({top: 0, behavior: 'smooth'});
+  $('cooked').placeholder = 'weigh it again';
+}
+
+function deleteDish(id) {
+  const d = data.dishes.find((x) => x.id === id);
+  if (!d || !confirm(`Delete “${d.title}”?`)) return;
+  removeDish(id);
+  openId = null; renderSections(); renderStash();
+}
+
+function removeDish(id) {
+  const d = data.dishes.find((x) => x.id === id);
+  if (!d) return;
+  data.dishes = data.dishes.filter((x) => x.id !== id);
+  d.rows.forEach((r) => { const u = data.usual[r.section]; if (u[r.name] > 1) u[r.name]--; else delete u[r.name]; });
+  // Not sent yet → just drop it from the queue. Already sent (or sending now) → delete on the server.
+  const qi = queue.findIndex((o) => o.t === 'addDish' && o.dish.id === id && o !== sending);
+  if (qi >= 0) { queue.splice(qi, 1); persist(); } else enqueue({t:'delDish', id});
+  if (lastId === id) lastId = null;
+  persist();
+}
+
+// ---------- Events ----------
+document.addEventListener('input', (e) => {
+  const t = e.target;
+  if (t.dataset.new !== undefined) {
+    form[t.dataset.new][+t.dataset.j].draft = t.value;
+    const el = document.querySelector(`[data-nerr="${t.dataset.new}-${t.dataset.j}"]`); if (el) el.textContent = '';
+    return;
+  }
+  if (t.dataset.g !== undefined || t.id === 'cooked' || t.id === 'plate') {
+    const c = cleanNum(t.value); if (c !== t.value) t.value = c;
+    t.classList.remove('bad'); $('err').textContent = '';
+  }
+  if (t.dataset.g !== undefined) form[t.dataset.g][+t.dataset.j].g = t.value;
+  if (t.id === 'search') return renderStash();
+  updateLive();
+});
+
+document.addEventListener('change', (e) => {
+  const t = e.target;
+  if (t.dataset.s === undefined) return;
+  const k = t.dataset.s, j = +t.dataset.j;
+  if (t.value === '__new') {
+    form[k][j] = {...form[k][j], adding: true, draft: ''};
+    renderSections();
+    const n = document.querySelector(`[data-new="${k}"][data-j="${j}"]`); n && n.focus();
+    return;
+  }
+  form[k][j].name = t.value;
+  if (t.value) { const g = document.querySelector(`[data-g="${k}"][data-j="${j}"]`); g && !g.value && g.focus(); }
+  updateLive();
+});
+
+document.addEventListener('keydown', (e) => {
+  const t = e.target;
+  if (e.key !== 'Enter') return;
+  if (t.dataset.new !== undefined) { e.preventDefault(); addCustom(t.dataset.new, +t.dataset.j); }
+  else if (t.id === 'pin') { e.preventDefault(); $('pinGo').click(); }
+  else if (t.id === 'plate') { e.preventDefault(); t.blur(); quantify(); }
+  else if (t.id === 'cooked' || t.id === 'title' || t.dataset.g !== undefined) {
+    // Enter / Next on the keyboard moves on: grams → next grams box → cooked → plate.
+    e.preventDefault();
+    const order = [...document.querySelectorAll('[data-g]'), $('cooked'), $('plate')];
+    const next = t.id === 'title' ? order[0] : order[order.indexOf(t) + 1];
+    (next || $('plate')).focus();
+  }
+});
+
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  const d = b.dataset, find = (id) => data.dishes.find((x) => x.id === id);
+  if (d.add) { form[d.add].push({}); renderSections(); }
+  else if (d.del) { form[d.del].splice(+d.j, 1); renderSections(); }
+  else if (d.ok) addCustom(d.ok, +d.j);
+  else if (d.cancel) { form[d.cancel][+d.j] = {g: form[d.cancel][+d.j].g}; renderSections(); }
+  else if (d.edit) { editing[d.edit] = !editing[d.edit]; renderSections(); }
+  else if (d.rm) {
+    data.custom[d.rm] = data.custom[d.rm].filter((m) => m !== d.name);
+    if (!data.custom[d.rm].length) editing[d.rm] = false;
+    enqueue({t:'delCustom', s:d.rm, name:d.name}); renderSections();
+  }
+  else if (d.open) { openId = openId === d.open ? null : d.open; renderStash(); }
+  else if (d.copy) copyText(find(d.copy).text, b);
+  else if (d.wa) openWhatsApp(find(d.wa).text);
+  else if (d.load) loadDish(find(d.load));
+  else if (d.rmdish) deleteDish(d.rmdish);
+});
+
+$('go').onclick = quantify;
+$('copy').onclick = (e) => copyText($('txt').textContent, e.target);
+$('wa').onclick = () => openWhatsApp($('txt').textContent);
+
+$('pinGo').onclick = async () => {
+  const v = $('pin').value.trim();
+  if (!v) { $('pinErr').textContent = 'Enter your PIN.'; return; }
+  pin = v;
+  try {
+    const fresh = await api('GET', '/api/data');
+    lsSet('qb.pin', pin);
+    data = Object.assign(EMPTY(), fresh); persist();
+    $('gate').hidden = true; $('app').hidden = false;
+    renderSections(); renderStash(); flush();
+  } catch (e) {
+    pin = '';
+    $('pinErr').textContent = e.pin ? 'Wrong PIN.' : e.status ? `Server problem: ${e.message}` : "Can't reach the server. Check your connection.";
+  }
+};
+
+// ---------- Start ----------
+(function init() {
+  let zz = 'M0 0'; for (let x = 0; x < 300; x += 10) zz += ` L${x + 5} 9 L${x + 10} 0`;
+  $('zz').setAttribute('d', zz + ' Z');
+  $('today').textContent = new Date().toLocaleDateString('en-IN', {day:'numeric', month:'short'});
+  window.addEventListener('online', refresh);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if (!pin) return askPin('');
+  $('app').hidden = false;
+  renderSections(); renderStash();
+  refresh();
+})();
+</script>
+</body>
+</html>

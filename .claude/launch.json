@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "quantifybro",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["scripts/dev.js"],
+      "port": 3100
+    }
+  ]
+}
