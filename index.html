@@ -58,6 +58,10 @@ select:focus,input:focus{border-color:#185FA5}
 .sync{font-size:11px;background:#FAC775;border:1.5px solid var(--ink);border-radius:99px;padding:1px 6px;margin-left:6px;font-family:var(--mono)}
 .hint{font-size:14px;color:var(--muted);padding:0 2px}
 .status{font-size:12px;color:var(--muted);text-align:center;margin-top:18px;font-family:var(--mono)}
+.dark .link{color:var(--cream)}
+.vrow{display:grid;grid-template-columns:minmax(0,1fr) 82px 32px;gap:6px;margin-bottom:6px;align-items:center}
+.vrow .x{color:var(--cream)}
+.vname{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
 .gate .card{width:100%;max-width:360px;background:#fff;padding:20px}
 [hidden]{display:none!important}
@@ -86,6 +90,7 @@ select:focus,input:focus{border-color:#185FA5}
   <div id="secs"></div>
 
   <div class="card dark">
+    <div id="vesselBox" style="margin-bottom:12px"></div>
     <div style="display:grid;grid-template-columns:100px minmax(0,1fr);gap:14px;align-items:center">
       <svg viewBox="0 0 100 100" width="100" height="100" aria-hidden="true">
         <circle cx="50" cy="50" r="40" fill="none" stroke="#444441" stroke-width="14"/>
@@ -93,7 +98,7 @@ select:focus,input:focus{border-color:#185FA5}
         <text id="pct" x="50" y="56" text-anchor="middle" font-family="Space Mono, monospace" font-size="18" fill="#FFF6E5">0%</text>
       </svg>
       <div style="display:grid;gap:8px">
-        <div><div class="lbl">Cooked total (g)</div><input id="cooked" class="num" inputmode="decimal" placeholder="1100" autocomplete="off"></div>
+        <div><div class="lbl" id="cookedLbl">Cooked total (g)</div><input id="cooked" class="num" inputmode="decimal" placeholder="1100" autocomplete="off"><div id="foodOnly" style="font-family:var(--mono);font-size:12px;color:var(--lime);margin-top:4px" hidden></div></div>
         <div><div class="lbl" style="color:var(--lime)">My plate (g)</div><input id="plate" class="num" inputmode="decimal" placeholder="250" autocomplete="off" enterkeyhint="go" style="border-color:var(--lime)"></div>
       </div>
     </div>
@@ -123,10 +128,18 @@ select:focus,input:focus{border-color:#185FA5}
 const SECTIONS = [
   {k:'veg', n:'Veggies', e:'🥕', bg:'#C0DD97', o:['Onion','Tomato','Potato','Sweet potato','Carrot','Beetroot','Radish','Beans','Cluster beans','Broad beans','Peas','Capsicum','Cabbage','Cauliflower','Broccoli','Spinach','Methi leaves','Amaranth','Coriander leaves','Mint','Curry leaves','Brinjal','Ladies finger','Bottle gourd','Ridge gourd','Snake gourd','Bitter gourd','Ash gourd','Pumpkin','Chayote','Drumstick','Raw banana','Cucumber','Mushroom','Corn','Spring onion','Garlic','Ginger','Green chilli','Lemon']},
   {k:'starch', n:'Starch', e:'🌾', bg:'#FAC775', o:['Rice','Brown rice','Red rice','Wheat flour','Maida','Rava','Broken wheat','Poha','Murmura','Vermicelli','Ragi flour','Jowar flour','Bajra flour','Rice flour','Besan','Oats','Quinoa','Millet','Sabudana','Whole wheat bread','White bread','Pasta','Toor dal','Moong dal','Masoor dal','Urad dal','Chana dal','Whole moong','Kabuli chana','Kala chana','Rajma','Horse gram','Soya chunks']},
-  {k:'fat', n:'Fat', e:'🧈', bg:'#F0997B', o:['Oil','Sunflower oil','Groundnut oil','Coconut oil','Mustard oil','Sesame oil','Olive oil','Ghee','Butter','Grated coconut','Dry coconut','Peanuts','Sesame seeds','Flax seeds','Chia seeds']},
-  {k:'extra', n:'Extras', e:'🧀', bg:'#AFA9EC', o:['Milk','Curd','Buttermilk','Paneer','Cheese','Cream','Khoa','Milk powder','Almonds','Cashew','Walnuts','Pistachios','Raisins','Dates','Anjeer','Dried apricot']},
+  {k:'fat', n:'Fat', e:'🧈', bg:'#F0997B', o:['Oil','Sunflower oil','Groundnut oil','Coconut oil','Mustard oil','Sesame oil','Olive oil','Ghee','Butter','Peanut butter','Grated coconut','Dry coconut','Peanuts','Sesame seeds','Flax seeds','Chia seeds']},
+  {k:'extra', n:'Extras', e:'🧀', bg:'#AFA9EC', o:['Milk','Curd','Buttermilk','Paneer','Cheese','Cream','Khoa','Milk powder','Roasted peanuts','Almonds','Cashew','Walnuts','Pistachios','Raisins','Dates','Anjeer','Dried apricot']},
 ];
-const USUAL_MAX = 6;
+// Favourites start at the top of "Your usual": each counts as if used FAV_HEAD_START
+// times, so anything you use more often can pass them.
+const FAVOURITES = {
+  veg: ['Onion', 'Tomato', 'Potato'],
+  fat: ['Coconut oil', 'Ghee', 'Butter', 'Peanut butter'],
+  extra: ['Paneer', 'Cheese', 'Roasted peanuts'],
+};
+const FAV_HEAD_START = 3;
+const USUAL_MAX = 8;
 
 // ---------- Small helpers ----------
 const $ = (id) => document.getElementById(id);
@@ -143,8 +156,8 @@ const cleanNum = (v) => { v = String(v).replace(/[^0-9.]/g, ''); const i = v.ind
 const fmtWhen = (iso) => new Date(iso).toLocaleString('en-IN', {day:'numeric', month:'short', hour:'numeric', minute:'2-digit'});
 
 // ---------- State ----------
-// data mirrors the server: {dishes, custom:{sec:[names]}, usual:{sec:{name:n}}}
-const EMPTY = () => ({dishes:[], custom:{veg:[],starch:[],fat:[],extra:[]}, usual:{veg:{},starch:{},fat:{},extra:{}}});
+// data mirrors the server: {dishes, custom:{sec:[names]}, usual:{sec:{name:n}}, vessels:[{name, weight_g}]}
+const EMPTY = () => ({dishes:[], custom:{veg:[],starch:[],fat:[],extra:[]}, usual:{veg:{},starch:{},fat:{},extra:{}}, vessels:[]});
 let data = Object.assign(EMPTY(), ls('qb.cache', {}));
 let queue = ls('qb.queue', []);          // writes waiting to reach the server
 let pin = ls('qb.pin', '');
@@ -153,6 +166,11 @@ const editing = {};
 let openId = null;
 let lastId = null, lastKey = '';   // the dish just quantified (re-tapping updates it instead of saving twice)
 const MAX_G = 999999;
+// Vessel: a vessel name, NO_VESSEL (food weighed alone) or '' (not picked yet). Remembered per device.
+const NO_VESSEL = '__none';
+let vesselSel = ls('qb.vessel', '');
+let vesselMode = '';               // '' | 'adding' | 'editing'
+let vesselDraft = {name: '', w: ''};
 
 const persist = () => { lsSet('qb.cache', data); lsSet('qb.queue', queue); };
 
@@ -186,6 +204,8 @@ async function flush() {
         if (op.t === 'delDish') await api('DELETE', '/api/dishes?id=' + encodeURIComponent(op.id));
         if (op.t === 'addCustom') await api('POST', '/api/custom', {section: op.s, name: op.name});
         if (op.t === 'delCustom') await api('DELETE', `/api/custom?section=${encodeURIComponent(op.s)}&name=${encodeURIComponent(op.name)}`);
+        if (op.t === 'saveVessel') await api('POST', '/api/vessels', {name: op.name, weight_g: op.w});
+        if (op.t === 'delVessel') await api('DELETE', '/api/vessels?name=' + encodeURIComponent(op.name));
       } catch (e) {
         if (e.pin) return askPin('Your PIN changed. Enter it again.');
         if (e.status && e.status >= 400 && e.status < 500) {
@@ -211,7 +231,7 @@ async function refresh() {
   try {
     const fresh = await api('GET', '/api/data');
     data = Object.assign(EMPTY(), fresh);
-    persist(); renderSections(); renderStash(); setStatus('');
+    persist(); renderSections(); renderVessel(); renderStash(); setStatus('');
   } catch (e) {
     if (e.pin) return askPin(pin ? 'Wrong PIN.' : '');
     setStatus('Offline — showing your last saved stash');
@@ -226,7 +246,11 @@ function optionsFor(s, chosen) {
   const used = data.usual[s.k] || {}, mine = data.custom[s.k] || [];
   const mineSet = new Set(mine);
   const all = [...s.o, ...mine.filter((m) => !s.o.some((o) => same(o, m)))];
-  const top = all.filter((o) => used[o] > 0).sort((a, b) => used[b] - used[a] || a.localeCompare(b)).slice(0, USUAL_MAX);
+  const favs = FAVOURITES[s.k] || [];
+  const score = (o) => (used[o] || 0) + (favs.includes(o) ? FAV_HEAD_START : 0);
+  const favRank = (o) => { const i = favs.indexOf(o); return i < 0 ? 99 : i; };
+  const top = all.filter((o) => score(o) > 0)
+    .sort((a, b) => score(b) - score(a) || favRank(a) - favRank(b) || a.localeCompare(b)).slice(0, USUAL_MAX);
   const topSet = new Set(top);
   const rest = all.filter((o) => !topSet.has(o)).sort((a, b) => a.localeCompare(b));
   if (chosen && !all.includes(chosen)) rest.unshift(chosen);   // e.g. a deleted custom still in a loaded dish
@@ -275,10 +299,76 @@ function renderSections() {
   updateLive();
 }
 
+// ---------- Vessels ----------
+const findVessel = (name) => data.vessels.find((v) => same(v.name, name));
+// Weight to subtract: vessel's weight, 0 for "no vessel", null if none picked yet.
+function vesselWeight() {
+  if (vesselSel === NO_VESSEL) return 0;
+  const v = vesselSel && findVessel(vesselSel);
+  return v ? v.weight_g : null;
+}
+// Food-only weight from what was typed in the weight box.
+const foodWeight = () => { const g = +$('cooked').value || 0, vw = vesselWeight(); return g - (vw || 0); };
+const fmtG = (n) => r0(n).toLocaleString('en-IN');
+
+function setVessel(name) {
+  vesselSel = name; lsSet('qb.vessel', name);
+}
+
+function renderVessel() {
+  if (vesselSel && vesselSel !== NO_VESSEL && !findVessel(vesselSel) && data.vessels.length) setVessel('');
+  const box = $('vesselBox');
+  const head = (right) => `<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+    <span class="lbl" style="margin:0">Cooked in</span>${right}</div>`;
+  if (vesselMode === 'adding') {
+    box.innerHTML = head('') + `
+      <div class="vrow" style="grid-template-columns:minmax(0,1fr) 72px 56px 28px">
+        <input id="vNewName" placeholder="Vessel name" maxlength="60" value="${esc(vesselDraft.name)}" style="border-style:dashed">
+        <input id="vNewW" class="num" inputmode="decimal" placeholder="g" value="${esc(vesselDraft.w)}" enterkeyhint="done">
+        <button class="mini" id="vAdd" style="background:var(--lime);color:var(--ink)">Add</button>
+        <button class="x" id="vCancel" aria-label="Cancel">✕</button>
+      </div>
+      <div class="err" id="vErr" style="margin:0;font-size:13px;min-height:0;color:#F09595"></div>`;
+    return;
+  }
+  const opts = data.vessels.map((v) => `<option value="${esc(v.name)}"${same(v.name, vesselSel) ? ' selected' : ''}>${esc(v.name)} · ${fmtG(v.weight_g)} g</option>`).join('');
+  box.innerHTML = head(data.vessels.length ? `<button class="link" id="vEdit">${vesselMode === 'editing' ? 'done' : 'edit vessels'}</button>` : '') + `
+    <select id="vessel" aria-label="Cooked in">
+      <option value=""${vesselSel ? '' : ' selected'}>Pick your vessel…</option>
+      ${opts}
+      <option value="${NO_VESSEL}"${vesselSel === NO_VESSEL ? ' selected' : ''}>No vessel (food weighed alone)</option>
+      <option value="__new">＋ Add new vessel…</option>
+    </select>` +
+    (vesselMode === 'editing' ? `<div style="margin-top:10px">
+      <div style="font-size:13px;color:#B4B2A9;margin-bottom:6px">Change a weight, or ✕ to remove</div>
+      ${data.vessels.map((v) => `<div class="vrow"><span class="vname">${esc(v.name)}</span>
+        <input class="num" inputmode="decimal" value="${r0(v.weight_g)}" data-vw="${esc(v.name)}" aria-label="${esc(v.name)} weight in grams">
+        <button class="x" data-vdel="${esc(v.name)}" aria-label="Remove ${esc(v.name)}">✕</button></div>`).join('')}
+    </div>` : '');
+  updateLive();
+}
+
+function addVessel() {
+  const name = vesselDraft.name.trim().replace(/\s+/g, ' '), w = +vesselDraft.w;
+  if (!name) { $('vErr').textContent = 'Name the vessel.'; return; }
+  if (!(w > 0) || w > 20000) { $('vErr').textContent = 'Enter its empty weight in grams.'; return; }
+  const v = findVessel(name);
+  if (v) v.weight_g = w; else data.vessels.push({name, weight_g: w});
+  enqueue({t:'saveVessel', name: v ? v.name : name, w});
+  setVessel(v ? v.name : name);
+  vesselMode = ''; vesselDraft = {name: '', w: ''};
+  renderVessel(); $('cooked').focus();
+}
+
 function updateLive() {
   SECTIONS.forEach((s) => { const el = $('sum-' + s.k); if (el) el.textContent = r0(sectionSum(s.k)) + ' g'; });
-  const ck = +$('cooked').value || 0, p = +$('plate').value || 0;
-  const f = ck ? Math.min(p / ck, 1) : 0;
+  const vw = vesselWeight(), withVessel = vw > 0;
+  $('cookedLbl').textContent = withVessel ? 'Weighed with vessel (g)' : 'Cooked total (g)';
+  const gross = +$('cooked').value || 0, ck = foodWeight();
+  $('foodOnly').hidden = !withVessel || !gross;
+  $('foodOnly').textContent = ck > 0 ? `Food only: ${fmtG(ck)} g` : 'Less than the empty vessel';
+  const p = +$('plate').value || 0;
+  const f = ck > 0 ? Math.min(p / ck, 1) : 0;
   $('ring').setAttribute('stroke-dasharray', `${(f * 251.3).toFixed(1)} 252`);
   $('pct').textContent = r0(f * 100) + '%';
 }
@@ -300,20 +390,24 @@ function addCustom(k, j) {
 // ---------- Quantify ----------
 function quantify() {
   const err = $('err'), ce = $('cooked'), pe = $('plate');
-  [ce, pe].forEach((e) => e.classList.remove('bad'));
+  const vs = $('vessel');
+  [ce, pe, vs].forEach((e) => e && e.classList.remove('bad'));
   const rows = SECTIONS.flatMap((s) => form[s.k].filter((r) => r.name && +r.g > 0).map((r) => ({section: s.k, name: r.name, raw_g: +r.g})));
-  const ck = +ce.value, p = +pe.value;
+  const gross = +ce.value, vw = vesselWeight(), ck = foodWeight(), p = +pe.value;
   if (!rows.length) { err.textContent = 'Add at least one ingredient with grams, bro.'; return; }
-  if (!(ck > 0)) { ce.classList.add('bad'); err.textContent = 'Weigh the cooked dish and enter the total.'; ce.focus(); return; }
+  if (vw === null) { if (vs) { vs.classList.add('bad'); vs.focus(); } err.textContent = 'Pick the vessel you cooked in.'; return; }
+  if (!(gross > 0)) { ce.classList.add('bad'); err.textContent = 'Weigh the cooked dish and enter the total.'; ce.focus(); return; }
+  if (!(ck > 0)) { ce.classList.add('bad'); err.textContent = "That's less than the empty vessel — check the weight."; ce.focus(); return; }
   if (!(p > 0)) { pe.classList.add('bad'); err.textContent = 'Enter how much is on your plate.'; pe.focus(); return; }
   if (p > ck) { pe.classList.add('bad'); err.textContent = "Your plate can't weigh more than the whole dish."; pe.focus(); return; }
-  if (ck > MAX_G || rows.some((r) => r.raw_g > MAX_G)) { err.textContent = 'That weight is too big — check the grams.'; return; }
+  if (gross > MAX_G || rows.some((r) => r.raw_g > MAX_G)) { err.textContent = 'That weight is too big — check the grams.'; return; }
   err.textContent = '';
 
   const f = p / ck;
   const title = $('title').value.trim().replace(/\s+/g, ' ') || 'Dish';
 
   // Tapping again: nothing changed → don't save twice; only the weights changed → replace that save.
+  const vessel = vesselSel === NO_VESSEL ? null : findVessel(vesselSel).name;
   const key = JSON.stringify([title, rows]);
   const prev = lastId && key === lastKey && data.dishes.find((d) => d.id === lastId);
   if (prev && prev.cooked_g === ck && prev.plate_g === p) { $('out').scrollIntoView({behavior:'smooth', block:'start'}); return; }
@@ -326,7 +420,7 @@ function quantify() {
   });
   text = text.trimEnd();
 
-  const dish = {id: uuid(), title, created_at: created, cooked_g: ck, plate_g: p, rows, text};
+  const dish = {id: uuid(), title, created_at: created, cooked_g: ck, plate_g: p, rows, text, vessel, vessel_g: vessel ? vw : null};
   data.dishes.unshift(dish);
   rows.forEach((r) => { const u = data.usual[r.section]; u[r.name] = (u[r.name] || 0) + 1; });
   enqueue({t:'addDish', dish});
@@ -384,7 +478,8 @@ function loadDish(d) {
   $('title').value = d.title === 'Dish' ? '' : d.title;
   $('cooked').value = ''; $('plate').value = '';
   $('out').hidden = true; $('err').textContent = '';
-  renderSections();
+  if (d.vessel && findVessel(d.vessel)) setVessel(findVessel(d.vessel).name);
+  renderSections(); renderVessel();
   window.scrollTo({top: 0, behavior: 'smooth'});
   $('cooked').placeholder = 'weigh it again';
 }
@@ -416,6 +511,12 @@ document.addEventListener('input', (e) => {
     const el = document.querySelector(`[data-nerr="${t.dataset.new}-${t.dataset.j}"]`); if (el) el.textContent = '';
     return;
   }
+  if (t.id === 'vNewName' || t.id === 'vNewW') {
+    if (t.id === 'vNewW') { const c = cleanNum(t.value); if (c !== t.value) t.value = c; }
+    vesselDraft[t.id === 'vNewName' ? 'name' : 'w'] = t.value; $('vErr').textContent = '';
+    return;
+  }
+  if (t.dataset.vw !== undefined) { const c = cleanNum(t.value); if (c !== t.value) t.value = c; return; }
   if (t.dataset.g !== undefined || t.id === 'cooked' || t.id === 'plate') {
     const c = cleanNum(t.value); if (c !== t.value) t.value = c;
     t.classList.remove('bad'); $('err').textContent = '';
@@ -427,6 +528,20 @@ document.addEventListener('input', (e) => {
 
 document.addEventListener('change', (e) => {
   const t = e.target;
+  if (t.id === 'vessel') {
+    t.classList.remove('bad'); $('err').textContent = '';
+    if (t.value === '__new') { vesselMode = 'adding'; vesselDraft = {name: '', w: ''}; renderVessel(); $('vNewName').focus(); return; }
+    setVessel(t.value); updateLive();
+    if (t.value && !$('cooked').value) $('cooked').focus();
+    return;
+  }
+  if (t.dataset.vw !== undefined) {           // edited a vessel's weight
+    const v = findVessel(t.dataset.vw), w = +t.value;
+    if (!v) return;
+    if (!(w > 0) || w > 20000) { t.value = r0(v.weight_g); return; }
+    if (w !== v.weight_g) { v.weight_g = w; enqueue({t:'saveVessel', name: v.name, w}); renderVessel(); }
+    return;
+  }
   if (t.dataset.s === undefined) return;
   const k = t.dataset.s, j = +t.dataset.j;
   if (t.value === '__new') {
@@ -444,6 +559,9 @@ document.addEventListener('keydown', (e) => {
   const t = e.target;
   if (e.key !== 'Enter') return;
   if (t.dataset.new !== undefined) { e.preventDefault(); addCustom(t.dataset.new, +t.dataset.j); }
+  else if (t.id === 'vNewName') { e.preventDefault(); $('vNewW').focus(); }
+  else if (t.id === 'vNewW') { e.preventDefault(); addVessel(); }
+  else if (t.dataset.vw !== undefined) { e.preventDefault(); t.blur(); }
   else if (t.id === 'pin') { e.preventDefault(); $('pinGo').click(); }
   else if (t.id === 'plate') { e.preventDefault(); t.blur(); quantify(); }
   else if (t.id === 'cooked' || t.id === 'title' || t.dataset.g !== undefined) {
@@ -458,7 +576,17 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b) return;
   const d = b.dataset, find = (id) => data.dishes.find((x) => x.id === id);
-  if (d.add) { form[d.add].push({}); renderSections(); }
+  if (b.id === 'vAdd') addVessel();
+  else if (b.id === 'vCancel') { vesselMode = ''; renderVessel(); }
+  else if (b.id === 'vEdit') { vesselMode = vesselMode === 'editing' ? '' : 'editing'; renderVessel(); }
+  else if (d.vdel) {
+    if (!confirm(`Remove “${d.vdel}”?`)) return;
+    data.vessels = data.vessels.filter((v) => !same(v.name, d.vdel));
+    if (same(vesselSel, d.vdel)) setVessel('');
+    if (!data.vessels.length) vesselMode = '';
+    enqueue({t:'delVessel', name: d.vdel}); renderVessel();
+  }
+  else if (d.add) { form[d.add].push({}); renderSections(); }
   else if (d.del) { form[d.del].splice(+d.j, 1); renderSections(); }
   else if (d.ok) addCustom(d.ok, +d.j);
   else if (d.cancel) { form[d.cancel][+d.j] = {g: form[d.cancel][+d.j].g}; renderSections(); }
@@ -488,7 +616,7 @@ $('pinGo').onclick = async () => {
     lsSet('qb.pin', pin);
     data = Object.assign(EMPTY(), fresh); persist();
     $('gate').hidden = true; $('app').hidden = false;
-    renderSections(); renderStash(); flush();
+    renderSections(); renderVessel(); renderStash(); flush();
   } catch (e) {
     pin = '';
     $('pinErr').textContent = e.pin ? 'Wrong PIN.' : e.status ? `Server problem: ${e.message}` : "Can't reach the server. Check your connection.";
@@ -505,7 +633,7 @@ $('pinGo').onclick = async () => {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   if (!pin) return askPin('');
   $('app').hidden = false;
-  renderSections(); renderStash();
+  renderSections(); renderVessel(); renderStash();
   refresh();
 })();
 </script>

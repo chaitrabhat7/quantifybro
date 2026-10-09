@@ -29,6 +29,11 @@ module.exports = guarded(async (req, res) => {
     if (!isSection(r && r.section) || !name || !isPositive(raw)) return res.status(400).json({ error: 'Bad ingredient row.' });
     rows.push({ section: r.section, name, raw_g: raw });
   }
+  // Optional: the vessel it was weighed in (cooked_g is always food only).
+  const vessel = cleanName(b.vessel) || null;
+  const vesselG = vessel ? Number(b.vessel_g) : null;
+  if (vessel && !(Number.isFinite(vesselG) && vesselG >= 0 && vesselG < 1e6)) return res.status(400).json({ error: 'Bad vessel weight.' });
+
   const created = new Date(b.created_at);
   await store().addDish({
     id: b.id,
@@ -38,6 +43,8 @@ module.exports = guarded(async (req, res) => {
     plate_g: plate,
     rows,
     text: String(b.text || '').slice(0, 5000),
+    vessel,
+    vessel_g: vesselG,
   });
   res.status(200).json({ ok: true });
 });

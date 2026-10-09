@@ -1,6 +1,6 @@
 // Offline support: the app page opens without signal. /api is never cached
 // (the app keeps its own copy of your stash and a queue of unsent changes).
-const CACHE = 'qb-v1';
+const CACHE = 'qb-v2';
 const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {

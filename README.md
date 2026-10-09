@@ -4,7 +4,9 @@ Weigh the raw ingredients of a dish, weigh the cooked dish, weigh your plate —
 QuantifyBro tells you how many grams of each raw ingredient are on your plate,
 as a WhatsApp-ready message. Every dish is saved automatically ("The stash").
 
-**Maths:** grams on plate = raw grams × (plate ÷ cooked total).
+**Maths:** grams on plate = raw grams × (plate ÷ food weight), where food weight =
+weighed total − the vessel you picked (cookers, kadais… with their empty weights,
+editable in the app; table `vessels`).
 
 ## How it's put together
 - `index.html` — the whole app (plain HTML/CSS/JS, no build step). The built-in
